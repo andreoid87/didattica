@@ -14,7 +14,12 @@
     main { max-width: 980px; margin: 0 auto; padding: 4rem 1.5rem; }
     h1 { font-size: clamp(2rem, 5vw, 3.1rem); letter-spacing: -.045em; margin: 0 0 .5rem; }
     p { color: #475569; line-height: 1.6; }
-    .empty { margin-top: 3rem; border: 1px dashed #cbd5e1; border-radius: 14px; padding: 2.2rem; background: #fff; text-align: center; }
+    .catalog { margin-top: 2rem; display: grid; gap: 14px; }
+    .catalog-card { display: block; padding: 22px 24px; background: #fff; color: inherit; border: 1px solid #dfe5eb; border-radius: 14px; text-decoration: none; transition: border-color .15s; }
+    .catalog-card:hover, .catalog-card:focus-visible { border-color: #007b8d; }
+    .catalog-card h2 { font-size: 1.12rem; letter-spacing: -.02em; margin: 0 0 6px; }
+    .catalog-card p { font-size: .9rem; margin: 0; }
+    .catalog-card:focus-visible { outline: 3px solid #007b8d; outline-offset: 3px; }
     footer { max-width: 980px; margin: 0 auto; padding: 2rem 1.5rem; color: #64748b; font-size: .85rem; }
   </style>
 </head>
@@ -23,10 +28,35 @@
   <main>
     <h1>Materiali didattici</h1>
     <p>Presentazioni e attività interattive, liberamente consultabili.</p>
-    <section class="empty" aria-label="Catalogo delle presentazioni">
-      <h2><a href="/interno-pc/">Interno del PC: CPU, memorie e motherboard</a></h2><p>Presentazione didattica · Informatica</p>
+    <section class="catalog" id="catalog" aria-label="Catalogo delle presentazioni">
+      <a class="catalog-card" href="/interno-pc/"><h2>Interno del PC: CPU, memorie e motherboard</h2><p>Presentazione didattica · Informatica</p></a>
     </section>
   </main>
   <footer>Andrea Accordino</footer>
+  <script>
+    /* I file dei materiali non richiedono rebuild: basta aggiornare catalog.json nello stesso commit. */
+    fetch('/catalog.json', {cache: 'no-store'})
+      .then(response => { if (!response.ok) throw Error('Catalogo non disponibile'); return response.json(); })
+      .then(data => {
+        if (data.schemaVersion !== 1 || !Array.isArray(data.materials)) return;
+        const section = document.getElementById('catalog');
+        const cards = data.materials
+          .filter(item => item && /^[a-z][a-z0-9-]{0,79}$/.test(item.id)
+            && typeof item.title === 'string' && item.title.length < 200)
+          .map(item => {
+            const link = document.createElement('a');
+            link.className = 'catalog-card';
+            link.href = '/' + item.id + '/';
+            const h = document.createElement('h2');
+            h.textContent = item.title;
+            const p = document.createElement('p');
+            p.textContent = typeof item.description === 'string' ? item.description : 'Presentazione didattica';
+            link.append(h, p);
+            return link;
+          });
+        if (cards.length) section.replaceChildren(...cards);
+      })
+      .catch(() => { /* Il catalogo statico resta disponibile. */ });
+  </script>
 </body>
 </html>

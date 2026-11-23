@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "materials": [
+    {
+      "id": "interno-pc",
+      "title": "Interno del PC: CPU, memorie e motherboard",
+      "description": "Presentazione didattica · Informatica"
+    }
+  ]
+}
