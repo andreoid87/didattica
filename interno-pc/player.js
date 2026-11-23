@@ -213,10 +213,8 @@
     exitButton.setAttribute('aria-label', 'Esci da schermo intero');
     clearTimeout(exitTimer);
     exitTimer = setTimeout(() => {
-      if (document.activeElement !== exitButton) {
-        exitButton.classList.remove('is-visible');
-        exitButton.setAttribute('aria-label', 'Mostra il comando per uscire dallo schermo intero');
-      }
+      exitButton.classList.remove('is-visible');
+      exitButton.setAttribute('aria-label', 'Mostra il comando per uscire dallo schermo intero');
     }, 3200);
   });
 
@@ -280,7 +278,7 @@
 
 /* Miniapp v1: trusted player creates an isolated frame from an approved marker.
    Editorial HTML never supplies iframe, srcdoc or script content. */
-const miniappRelease=/^https:\/\/(?:accortic-b69ab\.web\.app|accordino\.it)\/miniapp\/[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?\/v[1-9][0-9]{0,5}\/$/;
+const miniappRelease=/^(?:https:\/\/(?:accortic-b69ab\.web\.app|accordino\.it)\/miniapp\/[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?\/v[1-9][0-9]{0,5}\/|https:\/\/edu\.accordino\.it\/miniapp\/[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?\/)$/;
 let openMiniapp=null;
 for(const host of document.querySelectorAll('div[data-accortic-miniapp="v1"]')){
   const url=host.getAttribute('data-accortic-miniapp-url')||'',
