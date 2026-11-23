@@ -113,3 +113,7 @@ body.miniapp-open .viewport,body.miniapp-open .surface{overflow:visible!importan
 @media(max-width:600px){.miniapp-bar{padding:4px 6px;gap:4px}.miniapp-bar strong{font-size:13px}.miniapp-bar button{font-size:13px;padding:5px 8px}.miniapp-expanded .miniapp-bar strong{font-size:17px}.miniapp-expanded .miniapp-bar button{font-size:16px}}
 @media(prefers-reduced-motion:reduce){.miniapp-expanded,.miniapp-viewport{scroll-behavior:auto!important;transition:none!important}}
 
+
+/* Embed a single slide without redundant player chrome in exercise previews. */
+body.single header,body.single .player-controls{display:none!important}
+body.single main{padding:0}

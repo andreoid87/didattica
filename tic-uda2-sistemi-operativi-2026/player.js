@@ -4,7 +4,14 @@
   'use strict';
   const width = Number(document.body.dataset.slideWidth) || 960;
   const height = Number(document.body.dataset.slideHeight) || 540;
-  const slides = Array.from(document.querySelectorAll('main > section.slide'));
+  const allSlides = Array.from(document.querySelectorAll('main > section.slide'));
+  const params = new URLSearchParams(location.search);
+  if (params.has('single')) document.body.classList.add('single');
+  const helpIds = params.get('help') === '1' ? (params.get('slides') || '').split(',').filter(Boolean) : [];
+  const allowed = helpIds.length > 0 && helpIds.length <= 6
+    && helpIds.every(id => /^[A-Za-z0-9][A-Za-z0-9._:-]{0,149}$/.test(id))
+    && new Set(helpIds).size === helpIds.length ? new Set(helpIds) : null;
+  const slides = allowed ? allSlides.filter(slide => allowed.has(slide.id)) : allSlides;
   const main = document.querySelector('main');
   const header = document.querySelector('header');
   const oldSelection = document.getElementById('selection');
@@ -96,7 +103,7 @@
     try { id = decodeURIComponent(location.hash.slice(1)); } catch {}
     const found = slides.findIndex(slide => slide.id === id);
     active = found < 0 ? 0 : found;
-    slides.forEach((slide, index) => { slide.hidden = index !== active; });
+    allSlides.forEach(slide => { slide.hidden = slide !== slides[active]; });
     if (oldSelection) oldSelection.value = slides[active].id;
     position.textContent = (active + 1) + ' / ' + slides.length;
     prevButton.disabled = active === 0;
@@ -213,10 +220,8 @@
     exitButton.setAttribute('aria-label', 'Esci da schermo intero');
     clearTimeout(exitTimer);
     exitTimer = setTimeout(() => {
-      if (document.activeElement !== exitButton) {
-        exitButton.classList.remove('is-visible');
-        exitButton.setAttribute('aria-label', 'Mostra il comando per uscire dallo schermo intero');
-      }
+      exitButton.classList.remove('is-visible');
+      exitButton.setAttribute('aria-label', 'Mostra il comando per uscire dallo schermo intero');
     }, 3200);
   });
 
@@ -260,7 +265,7 @@
     go(index < 0 ? 0 : index);
   });
   window.addEventListener('beforeprint', () => {
-    slides.forEach(slide => {
+    allSlides.forEach(slide => {
       slide.hidden = false;
       slide.style.width = width + 'px';
       slide.style.height = height + 'px';
