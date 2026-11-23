@@ -1,6 +1,232 @@
-// Trusted runtime, never replaced by editorial HTML or an editor export.
-const width=Number(document.body.dataset.slideWidth),height=Number(document.body.dataset.slideHeight);
-const selection=document.getElementById('selection');let zoom=false;
-function resize(){document.querySelectorAll('.viewport').forEach(v=>{if(!v.clientWidth)return;const c=v.querySelector('.canvas'),surface=v.querySelector('.surface'),scale=zoom?1:Math.min(1,v.clientWidth/width);c.style.transform='scale('+scale+')';surface.style.width=(width*scale)+'px';surface.style.height=(height*scale)+'px';v.style.height=(zoom?Math.min(height,innerHeight*.8):height*scale)+'px';if(!zoom){v.scrollLeft=0;v.scrollTop=0;}});}
-function show(){let id='';try{id=decodeURIComponent(location.hash.slice(1));}catch{}const found=[...selection.options].some(o=>o.value===id);selection.value=found?id:'';document.querySelectorAll('.slide').forEach(s=>s.hidden=found&&id!==''&&s.id!==id);resize();}
-selection.addEventListener('change',()=>{location.hash=selection.value;});document.getElementById('zoom').addEventListener('click',()=>{zoom=!zoom;document.getElementById('zoom').textContent=zoom?'Adatta allo schermo':'Ingrandisci';resize();});addEventListener('hashchange',show);addEventListener('resize',resize);if(new URLSearchParams(location.search).has('single'))document.body.classList.add('single');show();
+/* Lettore statico minimale: nessuna dipendenza, nessuna chiamata di rete.
+   Non rigenera i canvas e non sposta eventuali iframe Miniapp. */
+(() => {
+  'use strict';
+  const width = Number(document.body.dataset.slideWidth) || 960;
+  const height = Number(document.body.dataset.slideHeight) || 540;
+  const slides = Array.from(document.querySelectorAll('main > section.slide'));
+  const main = document.querySelector('main');
+  const header = document.querySelector('header');
+  const oldSelection = document.getElementById('selection');
+  if (!main || !slides.length) return;
+
+  const home = document.createElement('a');
+  home.href = '/';
+  home.className = 'player-home';
+  home.textContent = '‹ Catalogo';
+  home.setAttribute('aria-label', 'Torna al catalogo');
+  header.prepend(home);
+
+  const controls = document.createElement('nav');
+  controls.className = 'player-controls';
+  controls.setAttribute('aria-label', 'Controlli presentazione');
+  controls.innerHTML = [
+    '<button type="button" class="player-button" data-action="prev" aria-label="Slide precedente" title="Precedente (←)">‹</button>',
+    '<span class="player-position" aria-live="polite"></span>',
+    '<button type="button" class="player-button" data-action="next" aria-label="Slide successiva" title="Successiva (→)">›</button>',
+    '<span class="player-divider" aria-hidden="true"></span>',
+    '<button type="button" class="player-button player-button-small" data-action="grid" aria-label="Mostra tutte le slide" title="Indice delle slide (G)">▦</button>',
+    '<button type="button" class="player-button player-button-small" data-action="notes" aria-label="Mostra testo e fonti" title="Testo e fonti (N)">☷</button>',
+    '<button type="button" class="player-button player-button-small" data-action="fullscreen" aria-label="Schermo intero" title="Schermo intero (F)">⛶</button>'
+  ].join('');
+  document.body.append(controls);
+
+  const dialog = document.createElement('div');
+  dialog.className = 'player-dialog';
+  dialog.hidden = true;
+  dialog.innerHTML = '<div class="dialog-panel" role="dialog" aria-modal="true" aria-labelledby="dialog-title"><div class="dialog-header"><h2 id="dialog-title"></h2><button class="dialog-close" type="button" aria-label="Chiudi">×</button></div><div class="dialog-content"></div></div>';
+  document.body.append(dialog);
+  const dialogTitle = dialog.querySelector('#dialog-title');
+  const dialogContent = dialog.querySelector('.dialog-content');
+  const prevButton = controls.querySelector('[data-action="prev"]');
+  const nextButton = controls.querySelector('[data-action="next"]');
+  const notesButton = controls.querySelector('[data-action="notes"]');
+  const fullButton = controls.querySelector('[data-action="fullscreen"]');
+  const position = controls.querySelector('.player-position');
+  let active = 0;
+  let idleTimer = 0;
+  let focusBeforeDialog = null;
+
+  function showControls() {
+    document.body.classList.remove('player-idle');
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => {
+      if (dialog.hidden && !controls.contains(document.activeElement) &&
+          !header.contains(document.activeElement)) {
+        document.body.classList.add('player-idle');
+      }
+    }, 3200);
+  }
+
+  function resize() {
+    const slide = slides[active];
+    if (!slide) return;
+    const styles = getComputedStyle(main);
+    const availableW = Math.max(1, main.clientWidth - parseFloat(styles.paddingLeft) - parseFloat(styles.paddingRight));
+    const availableH = Math.max(1, main.clientHeight - parseFloat(styles.paddingTop) - parseFloat(styles.paddingBottom));
+    const scale = Math.min(availableW / width, availableH / height);
+    const w = Math.round(width * scale * 100) / 100;
+    const h = Math.round(height * scale * 100) / 100;
+    const viewport = slide.querySelector('.viewport');
+    const surface = slide.querySelector('.surface');
+    const canvas = slide.querySelector('.canvas');
+    if (!viewport || !surface || !canvas) return;
+    slide.style.width = w + 'px';
+    slide.style.height = h + 'px';
+    viewport.style.width = w + 'px';
+    viewport.style.height = h + 'px';
+    surface.style.width = w + 'px';
+    surface.style.height = h + 'px';
+    canvas.style.transform = 'scale(' + scale + ')';
+  }
+
+  function show() {
+    let id = '';
+    try { id = decodeURIComponent(location.hash.slice(1)); } catch {}
+    const found = slides.findIndex(slide => slide.id === id);
+    active = found < 0 ? 0 : found;
+    slides.forEach((slide, index) => { slide.hidden = index !== active; });
+    if (oldSelection) oldSelection.value = slides[active].id;
+    position.textContent = (active + 1) + ' / ' + slides.length;
+    prevButton.disabled = active === 0;
+    nextButton.disabled = active === slides.length - 1;
+    notesButton.disabled = !slides[active].querySelector('.reading');
+    resize();
+    showControls();
+  }
+
+  function go(index) {
+    if (index < 0 || index >= slides.length) return;
+    const id = slides[index].id;
+    if (location.hash === '#' + encodeURIComponent(id)) show();
+    else location.hash = encodeURIComponent(id);
+  }
+
+  function closeDialog() {
+    if (dialog.hidden) return;
+    dialog.hidden = true;
+    dialogContent.replaceChildren();
+    main.inert = false;
+    controls.inert = false;
+    header.inert = false;
+    document.body.classList.remove('player-dialog-open');
+    (focusBeforeDialog || controls.querySelector('[data-action="grid"]')).focus();
+    showControls();
+  }
+
+  function openDialog(kind) {
+    focusBeforeDialog = document.activeElement;
+    dialogTitle.textContent = kind === 'grid' ? 'Tutte le slide' : 'Testo e fonti';
+    dialogContent.replaceChildren();
+    if (kind === 'grid') {
+      const grid = document.createElement('div');
+      grid.className = 'player-grid';
+      slides.forEach((slide, index) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'grid-item';
+        button.textContent = (index + 1) + '. ' + (slide.getAttribute('aria-label') || 'Diapositiva');
+        if (index === active) button.setAttribute('aria-current', 'true');
+        button.addEventListener('click', () => { closeDialog(); go(index); });
+        grid.append(button);
+      });
+      dialogContent.append(grid);
+    } else {
+      const reading = slides[active].querySelector('.reading');
+      if (!reading) return;
+      const copy = reading.cloneNode(true);
+      copy.open = true;
+      dialogContent.append(copy);
+    }
+    dialog.hidden = false;
+    main.inert = true;
+    controls.inert = true;
+    header.inert = true;
+    document.body.classList.add('player-dialog-open');
+    dialog.querySelector('.dialog-close').focus();
+  }
+
+  function syncFullscreen() {
+    const on = !!document.fullscreenElement;
+    fullButton.textContent = on ? '⊡' : '⛶';
+    fullButton.setAttribute('aria-label', on ? 'Esci da schermo intero' : 'Schermo intero');
+    fullButton.setAttribute('aria-pressed', String(on));
+    resize();
+  }
+
+  async function toggleFullscreen() {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
+    } catch {
+      fullButton.title = 'Schermo intero non disponibile in questo browser';
+    }
+    syncFullscreen();
+    showControls();
+  }
+
+  controls.addEventListener('click', event => {
+    const button = event.target.closest('button[data-action]');
+    if (!button || button.disabled) return;
+    const action = button.dataset.action;
+    if (action === 'prev') go(active - 1);
+    if (action === 'next') go(active + 1);
+    if (action === 'grid' || action === 'notes') openDialog(action);
+    if (action === 'fullscreen') toggleFullscreen();
+  });
+  dialog.querySelector('.dialog-close').addEventListener('click', closeDialog);
+  dialog.addEventListener('click', event => {
+    if (event.target === dialog) closeDialog();
+  });
+
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && !dialog.hidden) {
+      event.preventDefault();
+      closeDialog();
+      return;
+    }
+    if (!dialog.hidden || event.altKey || event.ctrlKey || event.metaKey ||
+        document.activeElement?.tagName === 'IFRAME' ||
+        event.target.closest('input,textarea,select,[contenteditable]')) return;
+    const key = event.key.toLowerCase();
+    if (event.key === 'ArrowRight' || event.key === 'PageDown') {
+      event.preventDefault(); go(active + 1);
+    } else if (event.key === 'ArrowLeft' || event.key === 'PageUp') {
+      event.preventDefault(); go(active - 1);
+    } else if (key === 'f') {
+      event.preventDefault(); toggleFullscreen();
+    } else if (key === 'g') {
+      event.preventDefault(); openDialog('grid');
+    } else if (key === 'n' && !notesButton.disabled) {
+      event.preventDefault(); openDialog('notes');
+    }
+    showControls();
+  });
+  document.addEventListener('pointermove', showControls, {passive:true});
+  document.addEventListener('pointerdown', showControls, {passive:true});
+  document.addEventListener('focusin', showControls);
+  document.addEventListener('fullscreenchange', syncFullscreen);
+  window.addEventListener('resize', resize);
+  window.addEventListener('hashchange', show);
+  if (oldSelection) oldSelection.addEventListener('change', () => {
+    const index = slides.findIndex(slide => slide.id === oldSelection.value);
+    go(index < 0 ? 0 : index);
+  });
+  window.addEventListener('beforeprint', () => {
+    slides.forEach(slide => {
+      slide.hidden = false;
+      slide.style.width = width + 'px';
+      slide.style.height = height + 'px';
+      const canvas = slide.querySelector('.canvas');
+      if (canvas) canvas.style.transform = 'scale(1)';
+      const viewport = slide.querySelector('.viewport');
+      const surface = slide.querySelector('.surface');
+      for (const node of [viewport, surface]) {
+        if (node) {node.style.width = width + 'px'; node.style.height = height + 'px';}
+      }
+    });
+  });
+  window.addEventListener('afterprint', show);
+  document.body.classList.add('player-ready');
+  show();
+})();
