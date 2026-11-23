@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'; font-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>MS-DOS 6.22 — Simulatore didattico</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./engine.js" defer></script>
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <main class="app" aria-label="Terminale MS-DOS simulato">
+    <section id="terminal" class="terminal" aria-label="Schermo del terminale">
+      <div id="output" role="log" aria-live="off" aria-label="Risposte dei comandi"></div>
+      <form id="form" class="command-form" autocomplete="off">
+        <label id="prompt" class="prompt" for="command">C:\&gt;</label>
+        <input id="command" type="text" aria-label="Digita un comando MS-DOS" spellcheck="false" autocapitalize="off" autocomplete="off" enterkeyhint="go" maxlength="160">
+      </form>
+    </section>
+    <nav class="tools" aria-label="Tasti rapidi della simulazione">
+      <button type="button" data-command="DIR">DIR</button>
+      <button type="button" data-command="CD ..">CD ..</button>
+      <button type="button" data-command="TREE">TREE</button>
+      <button type="button" data-command="HELP">HELP</button>
+      <button type="button" data-command="CLS">CLS</button>
+      <button type="submit" form="form" class="execute" aria-label="Esegui il comando digitato">Invio ↵</button>
+      <button type="button" class="reset" id="restart">Ricomincia</button>
+    </nav>
+    <div id="goal" class="sr-only">Trova LEZIONE.TXT</div>
+    <div id="announcement" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+  </main>
+</body>
+</html>
