@@ -30,6 +30,15 @@
     '<button type="button" class="player-button player-button-small" data-action="fullscreen" aria-label="Schermo intero" title="Schermo intero (F)">⛶</button>'
   ].join('');
   document.body.append(controls);
+  // A LIM can reveal a touch-sized exit button in the upper-right corner.
+  const exitButton = document.createElement('button');
+  exitButton.type = 'button';
+  exitButton.className = 'fullscreen-exit';
+  exitButton.textContent = 'Esci da schermo intero';
+  exitButton.setAttribute('aria-label', 'Mostra il comando per uscire dallo schermo intero');
+  exitButton.title = 'Tocca per mostrare il comando di uscita';
+  exitButton.hidden = true;
+  document.body.append(exitButton);
 
   const dialog = document.createElement('div');
   dialog.className = 'player-dialog';
@@ -45,9 +54,11 @@
   const position = controls.querySelector('.player-position');
   let active = 0;
   let idleTimer = 0;
+  let exitTimer = 0;
   let focusBeforeDialog = null;
 
   function showControls() {
+    if (document.fullscreenElement) return;
     document.body.classList.remove('player-idle');
     clearTimeout(idleTimer);
     idleTimer = setTimeout(() => {
@@ -148,6 +159,13 @@
 
   function syncFullscreen() {
     const on = !!document.fullscreenElement;
+    document.body.classList.toggle('fullscreen-mode', on);
+    exitButton.hidden = !on;
+    if (!on) {
+      clearTimeout(exitTimer);
+      exitButton.classList.remove('is-visible');
+      exitButton.setAttribute('aria-label', 'Mostra il comando per uscire dallo schermo intero');
+    }
     fullButton.textContent = on ? '⊡' : '⛶';
     fullButton.setAttribute('aria-label', on ? 'Esci da schermo intero' : 'Schermo intero');
     fullButton.setAttribute('aria-pressed', String(on));
@@ -174,6 +192,34 @@
     if (action === 'grid' || action === 'notes') openDialog(action);
     if (action === 'fullscreen') toggleFullscreen();
   });
+  // Fullscreen touch navigation deliberately ignores Miniapps and interactive slide elements.
+  // An iframe's pointer events do not bubble to this document, preserving its controls.
+  main.addEventListener('click', event => {
+    if (!document.fullscreenElement || !dialog.hidden || event.button !== 0) return;
+    if (event.target.closest('a,button,input,textarea,select,summary,iframe,[contenteditable],[data-accortic-miniapp],[role="button"],[role="textbox"]')) return;
+    if (document.querySelector('.miniapp-expanded')) return;
+    const bounds = main.getBoundingClientRect();
+    go(active + (event.clientX < bounds.left + bounds.width / 2 ? -1 : 1));
+  });
+
+  exitButton.addEventListener('click', event => {
+    event.stopPropagation();
+    if (!document.fullscreenElement) return;
+    if (exitButton.classList.contains('is-visible')) {
+      toggleFullscreen();
+      return;
+    }
+    exitButton.classList.add('is-visible');
+    exitButton.setAttribute('aria-label', 'Esci da schermo intero');
+    clearTimeout(exitTimer);
+    exitTimer = setTimeout(() => {
+      if (document.activeElement !== exitButton) {
+        exitButton.classList.remove('is-visible');
+        exitButton.setAttribute('aria-label', 'Mostra il comando per uscire dallo schermo intero');
+      }
+    }, 3200);
+  });
+
   dialog.querySelector('.dialog-close').addEventListener('click', closeDialog);
   dialog.addEventListener('click', event => {
     if (event.target === dialog) closeDialog();
@@ -187,6 +233,7 @@
     }
     if (!dialog.hidden || event.altKey || event.ctrlKey || event.metaKey ||
         document.activeElement?.tagName === 'IFRAME' ||
+        document.querySelector('.miniapp-expanded') ||
         event.target.closest('input,textarea,select,[contenteditable]')) return;
     const key = event.key.toLowerCase();
     if (event.key === 'ArrowRight' || event.key === 'PageDown') {

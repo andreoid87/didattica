@@ -75,3 +75,22 @@ td{padding:4px 5px;vertical-align:top;border-bottom:1px solid #cce1e2;white-spac
  .slide>.reading{display:none!important}
  .viewport{box-shadow:none}
 }
+
+/* Fullscreen LIM: no toolbar; navigation via left/right halves of the stage. */
+body.fullscreen-mode header,
+body.fullscreen-mode .player-controls{display:none!important}
+body.fullscreen-mode main{padding:0}
+.fullscreen-exit[hidden]{display:none!important}
+.fullscreen-exit{position:fixed;z-index:9;right:12px;top:12px;
+  display:flex;align-items:center;justify-content:center;
+  width:54px;height:54px;padding:0;border:0;border-radius:12px;
+  background:transparent;color:transparent;opacity:0;pointer-events:auto;
+  font-size:14px;white-space:nowrap;cursor:pointer;
+  touch-action:manipulation;transition:opacity .15s ease,background .15s ease}
+.fullscreen-exit.is-visible{width:auto;min-width:180px;padding:0 16px;
+  background:rgba(15,23,35,.94);color:white;opacity:1;
+  border:1px solid rgba(255,255,255,.25)}
+.fullscreen-exit:focus-visible{opacity:1;width:auto;min-width:180px;padding:0 16px;
+  color:white;background:#1a2635}
+body:has(.miniapp-expanded) .fullscreen-exit{display:none!important}
+@media print{.fullscreen-exit{display:none!important}}
