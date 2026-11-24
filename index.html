@@ -8,8 +8,8 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
   <meta name="theme-color" content="#f8f6ef">
   <title>Didattica · Andrea Accordino</title>
-  <link rel="stylesheet" href="/home.css">
-  <script src="/home.js" defer></script>
+  <link rel="stylesheet" href="/home.css?v=2">
+  <script src="/home.js?v=2" defer></script>
 </head>
 <body>
   <a class="skip" href="#percorso">Vai al percorso</a>
@@ -20,24 +20,18 @@
     </div>
   </header>
   <main class="shell">
-    <section class="hero" aria-labelledby="hero-title">
-      <div><p class="eyebrow">Tecnologie informatiche · TIC</p>
-      <h1 id="hero-title">Dal computer<br>al <em>digitale.</em></h1>
-      <p class="intro">Un percorso per conoscere, usare e comprendere le tecnologie digitali. Presentazioni e risorse interattive, liberamente consultabili.</p>
-      <a class="primary" href="#percorso">Esplora il percorso <span aria-hidden="true">↘</span></a></div>
-      <div class="hero-graphic" aria-hidden="true"><div class="graphic-grid"><span>01</span><span>10</span><span>11</span><span>00</span></div><div class="graphic-caption"><span>INPUT → OUTPUT</span><span>01 / 07</span></div></div>
+    <section id="percorso" class="path" aria-labelledby="path-title">
+      <div class="path-heading"><div><p class="eyebrow">Tecnologie informatiche · TIC</p><h1 id="path-title">Percorso didattico</h1><p class="intro">Sette unità, presentazioni e attività interattive.</p></div><div class="search-wrap"><label for="search">Cerca nei materiali</label><input id="search" type="search" placeholder="Es. sistemi operativi" autocomplete="off" disabled></div></div>
+      <p class="catalog-status" id="catalog-status" role="status" aria-live="polite">Caricamento dei materiali pubblicati…</p>
+      <button type="button" id="retry" hidden>Riprova</button>
+      <div id="units" class="units"></div>
+      <div id="unit-content" class="unit-content" hidden></div>
+      <noscript><p>Attiva JavaScript per consultare il catalogo aggiornato.</p></noscript>
     </section>
     <section class="featured" id="miniapp" aria-label="Laboratorio interattivo">
       <div class="terminal" aria-hidden="true"><span class="terminal-top">● ● ●</span><span>C:\&gt; DIR<span class="cursor">_</span></span><small>MS-DOS 6.22</small></div>
       <div class="feature-copy"><p class="eyebrow">Laboratorio interattivo</p><h2>MS-DOS</h2><p>Esplora un sistema operativo a riga di comando direttamente dal browser.</p></div>
       <a class="feature-link" href="/miniapp/ms-dos/">Apri il simulatore <span aria-hidden="true">↗</span></a>
-    </section>
-    <section id="percorso" class="path" aria-labelledby="path-title">
-      <div class="path-heading"><div><p class="eyebrow">Percorso didattico</p><h2 id="path-title">Le sette unità</h2></div><div class="search-wrap"><label for="search">Cerca nei materiali</label><input id="search" type="search" placeholder="Es. sistemi operativi" autocomplete="off" disabled></div></div>
-      <p class="catalog-status" id="catalog-status" role="status" aria-live="polite">Caricamento dei materiali pubblicati…</p>
-      <button type="button" id="retry" hidden>Riprova</button>
-      <div id="units" class="units"></div>
-      <noscript><p>Attiva JavaScript per consultare il catalogo aggiornato.</p></noscript>
     </section>
   </main>
   <footer class="shell footer"><span>Andrea Accordino · Didattica</span><span>Tecnologie informatiche</span></footer>

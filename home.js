@@ -50,7 +50,8 @@ function readCatalog(data){if(data?.schemaVersion!==1||!Array.isArray(data.mater
 function membership(id,units,aliases){if(Object.hasOwn(aliases,id))return aliases[id];return units.findIndex(unit=>id.startsWith(unit.prefix));}
 const byId=id=>document.getElementById(id);
 const search=byId('search'),status=byId('catalog-status'),container=byId('units'),retry=byId('retry');
-let materials=null;
+let materials=null,selected=null;
+const panel=byId('unit-content');
 function el(tag,cls,value){const node=document.createElement(tag);if(cls)node.className=cls;if(value!==undefined)node.textContent=value;return node;}
 function card(item){
   const link=el('a','material-card');link.href='/'+item.id+'/';
@@ -59,25 +60,38 @@ function card(item){
   if(description&&description!=='Presentazione didattica · Informatica')link.append(el('span','material-desc',description));
   link.append(el('span','material-action','Apri materiale ↗'));return link;
 }
-function render(){
+function render(focusIndex=null){
   const query=search.value,filtering=Boolean(normalize(query)),groups=units.map((unit,index)=>({unit,index,items:[]}));
   const extra={unit:{title:'Altri materiali'},index:-1,items:[]};
   for(const item of materials??[]){const index=membership(item.id,units,aliases);const group=index<0?extra:groups[index];if(matches(item,group.unit,query))group.items.push(item);}
   if(extra.items.length)groups.push(extra);
-  const fragment=document.createDocumentFragment();let count=0;
+  const fragment=document.createDocumentFragment(),content=document.createDocumentFragment();let count=0,focusButton=null;
   for(const group of groups){
-    count+=group.items.length;if(filtering&&!group.items.length)continue;
-    const details=el('details','unit'),summary=el('summary');
+    count+=group.items.length;
+    if(filtering&&!group.items.length)continue;
+    const active=filtering||selected===group.index;
+    const button=el('button','unit');button.type='button';button.setAttribute('aria-expanded',String(active));button.setAttribute('aria-controls','unit-content');
+    const top=el('span','unit-top');
     const number=el('span','unit-number',group.index<0?'·':String(group.index+1).padStart(2,'0'));number.setAttribute('aria-hidden','true');
+    const chevron=el('span','unit-chevron','›');chevron.setAttribute('aria-hidden','true');top.append(number,chevron);
     const title=el('span','unit-title',group.unit.title);
     title.append(el('span','unit-count',materials===null?'Disponibilità da verificare':group.items.length?group.items.length+(group.items.length===1?' materiale':' materiali'):'Nessun materiale pubblicato'));
-    const chevron=el('span','unit-chevron','›');chevron.setAttribute('aria-hidden','true');
-    summary.append(number,title,chevron);details.append(summary);
-    if(group.items.length){const list=el('div','material-list');list.append(...group.items.map(card));details.append(list);details.open=true;}
-    else details.append(el('p','empty',materials===null?'Catalogo non disponibile.':'I materiali compariranno qui quando saranno pubblicati.'));
-    fragment.append(details);
+    button.append(top,title);fragment.append(button);
+    if(focusIndex===group.index)focusButton=button;
+    button.addEventListener('click',()=>{
+      if(filtering){const section=byId('unit-result-'+group.index);if(section){section.focus();section.scrollIntoView({block:'nearest'});}return;}
+      selected=selected===group.index?null:group.index;render(group.index);
+    });
+    if(active){
+      const section=el('section','unit-section');section.id='unit-result-'+group.index;section.tabIndex=-1;
+      section.append(el('h2','',group.unit.title));
+      if(group.items.length){const list=el('div','material-list');list.append(...group.items.map(card));section.append(list);}
+      else section.append(el('p','empty',materials===null?'Catalogo non disponibile.':'I materiali compariranno qui quando saranno pubblicati.'));
+      content.append(section);
+    }
   }
-  container.replaceChildren(fragment);
+  container.replaceChildren(fragment);panel.replaceChildren(content);panel.hidden=!panel.childElementCount;
+  if(focusButton)focusButton.focus();
   if(materials===null)return;
   status.textContent=filtering?(count?count+' risultati':'Nessun risultato per la ricerca.'):count+(count===1?' materiale pubblicato':' materiali pubblicati');
 }
@@ -86,4 +100,4 @@ async function load(){
   try{const response=await fetch('/catalog.json',{cache:'no-store'});if(!response.ok)throw Error('Catalogo non disponibile');materials=readCatalog(await response.json());search.disabled=false;render();}
   catch{materials=null;search.value='';render();status.textContent='Catalogo temporaneamente non disponibile. Riprova.';retry.hidden=false;}
 }
-search.addEventListener('input',render);retry.addEventListener('click',load);render();void load();
+search.addEventListener('input',()=>render());retry.addEventListener('click',load);render();void load();
