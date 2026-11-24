@@ -299,17 +299,34 @@ for(const host of document.querySelectorAll('div[data-accortic-miniapp="v1"]')){
   const expand=document.createElement('button');expand.type='button';expand.textContent='Espandi per LIM';expand.setAttribute('aria-label','Espandi '+title+' per LIM');
   bar.append(caption,expand);
   const viewport=document.createElement('div');viewport.className='miniapp-viewport';
+  // Show a lightweight placeholder in the small slide object. Load the terminal
+  // only on explicit activation, without recreating the iframe on subsequent visits.
+  const preview=document.createElement('div');preview.className='miniapp-preview';
+  preview.textContent='Terminale MS-DOS · apri la simulazione per digitare i comandi.';
   const frame=document.createElement('iframe');
-  frame.src=url;frame.title=title;frame.setAttribute('sandbox','allow-scripts');
+  frame.title=title;frame.setAttribute('sandbox','allow-scripts');
   frame.setAttribute('referrerpolicy','no-referrer');
-  frame.setAttribute('loading','lazy');
-  viewport.append(frame);
+  frame.setAttribute('loading','eager');
+  frame.hidden=true;
+  viewport.append(preview,frame);
   host.replaceChildren(bar,viewport);
   // NEVER move/recreate the frame on expand: its in-memory game state must survive.
   let previouslyFocused=null,previousScroll=0;
+  const focusTerminal=()=>{
+    if(openMiniapp!==host||frame.hidden)return;
+    frame.focus({preventScroll:true});
+    // The sandbox has an opaque origin; a source-checked message makes the
+    // input focus deterministic after the iframe has loaded.
+    frame.contentWindow?.postMessage({type:'accortic-miniapp-focus-v1'},'*');
+  };
+  frame.addEventListener('load',()=>{if(openMiniapp===host)focusTerminal();});
+  addEventListener('message',event=>{
+    if(event.source===frame.contentWindow && event.data?.type==='accortic-miniapp-close-v1' && openMiniapp===host)close();
+  });
   const close=()=>{
     if(openMiniapp!==host)return;
     host.classList.remove('miniapp-expanded');
+    frame.hidden=true;preview.hidden=false;
     host.removeAttribute('role');host.removeAttribute('aria-modal');
     document.body.classList.remove('miniapp-open');
     expand.textContent='Espandi per LIM';expand.setAttribute('aria-label','Espandi '+title+' per LIM');
@@ -324,8 +341,10 @@ for(const host of document.querySelectorAll('div[data-accortic-miniapp="v1"]')){
     openMiniapp=host;host.classList.add('miniapp-expanded');
     host.setAttribute('role','dialog');host.setAttribute('aria-modal','true');
     document.body.classList.add('miniapp-open');
+    frame.hidden=false;preview.hidden=true;
     expand.textContent='Torna alla slide';expand.setAttribute('aria-label','Torna alla slide da '+title);
-    expand.focus({preventScroll:true});
+    if(!frame.hasAttribute('src'))frame.src=url;
+    else requestAnimationFrame(focusTerminal);
   };
   expand.addEventListener('click',toggle);
   addEventListener('keydown',event=>{

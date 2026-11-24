@@ -50,8 +50,20 @@
     event.preventDefault();
     run(input.value);
   });
+  // The player opens the terminal within a sandboxed iframe. Focusing the
+  // iframe alone does not focus this actual editable command line.
+  window.addEventListener('message', (event) => {
+    if (event.source === window.parent && event.data?.type === 'accortic-miniapp-focus-v1') {
+      focusInput();
+    }
+  });
   input.addEventListener('keydown', (event) => {
     // Execute directly from keyboard even in sandboxed iframes and on LIMs.
+    if (event.key === 'Escape' && window.parent !== window) {
+      event.preventDefault();
+      window.parent.postMessage({type:'accortic-miniapp-close-v1'},'*');
+      return;
+    }
     if (event.key === 'Enter' && !event.isComposing) {
       event.preventDefault();
       run(input.value);
